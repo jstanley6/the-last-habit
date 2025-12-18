@@ -11,25 +11,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
 
-      # Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # Run ESLint
       - name: Run ESLint
         run: npx eslint . --ext .js,.jsx,.ts,.tsx
 
-      # Run Prettier check
       - name: Run Prettier
         run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,md}"
+
+  supabase-tests:
+    runs-on: ubuntu-latest
+    needs: lint-and-format
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Spin up Supabase locally for testing
+      - name: Setup Supabase CLI
+        run: npm install -g supabase
+
+      - name: Start Supabase
+        run: supabase start &
+      
+      - name: Wait for Supabase
+        run: sleep 20
+
+      # Run edge function tests
+      - name: Test Edge Functions
+        run: |
+          deno test --allow-env --allow-net --allow-read supabase/functions
